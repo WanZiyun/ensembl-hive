@@ -869,8 +869,9 @@ sub set_log_directory_name {
 
     return unless ($hive_log_dir or $worker_log_dir);
 
-    my $dir_revhash = dir_revhash($self->dbID);
-    $worker_log_dir ||= $hive_log_dir .'/'. ($dir_revhash ? "$dir_revhash/" : '') . 'worker_id_' . $self->dbID;
+    my $hashed_id = $self->dbID || $self->process_id;
+    my $dir_revhash = dir_revhash($hashed_id);
+    $worker_log_dir ||= $hive_log_dir .'/'. ($dir_revhash ? "$dir_revhash/" : '') . ($self->dbID ? 'worker_id_' : 'worker_standalone_') . $hashed_id;
 
     eval {
         make_path( $worker_log_dir );
@@ -878,7 +879,7 @@ sub set_log_directory_name {
     } or die "Could not create '$worker_log_dir' directory : $@";
 
     $self->log_dir( $worker_log_dir );
-    $self->adaptor->update_log_dir( $self );
+    $self->adaptor->update_log_dir( $self ) if $self->adaptor;
 }
 
 
