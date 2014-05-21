@@ -26,12 +26,39 @@ use warnings;
 use Bio::EnsEMBL::Hive::AnalysisJob;
 use Bio::EnsEMBL::Hive::GuestProcess;
 use Bio::EnsEMBL::Hive::HivePipeline;
+use Bio::EnsEMBL::Hive::Queen;
 use Bio::EnsEMBL::Hive::Utils ('load_file_or_module', 'destringify');
 use Bio::EnsEMBL::Hive::Utils::PCL;
+use Bio::EnsEMBL::Hive::Valley;
 
 
 sub standaloneJob {
     my ($module_or_file, $input_id, $flags, $flow_into, $language) = @_;
+
+    my ($meadow_type, $meadow_name, $process_id, $meadow_host, $meadow_user) = Bio::EnsEMBL::Hive::Valley->new()->whereami();
+
+    my $worker = Bio::EnsEMBL::Hive::Queen->create_new_worker(
+
+        # Worker identity:
+        -meadow_type           => $meadow_type,
+        -meadow_name           => $meadow_name,
+        -process_id            => $process_id,
+        -meadow_host           => $meadow_host,
+        -meadow_user           => $meadow_user,
+
+        # Worker control parameters:
+        #-job_limit             => $job_limit,
+        #-life_span             => $life_span,
+        -no_cleanup            => $flags->{no_cleanup},
+        -no_write              => $flags->{no_write},
+        #-worker_log_dir        => $worker_log_dir,
+        #-hive_log_dir          => $hive_log_dir,
+        #-retry_throwing_jobs   => $retry_throwing_jobs,
+        #-can_respecialize      => $can_respecialize,
+
+        # Other parameters:
+        -debug                 => $flags->{debug},
+    );
 
     my $runnable_module = $language ? 'Bio::EnsEMBL::Hive::GuestProcess' : load_file_or_module( $module_or_file );
 
@@ -39,6 +66,7 @@ sub standaloneJob {
     my $runnable_object = $runnable_module->new($flags->{debug}, $language, $module_or_file);    # Only GuestProcess will read the arguments
     die "Runnable $module_or_file not created\n" unless $runnable_object;
     $runnable_object->execute_writes(not $flags->{no_write});
+    $runnable_object->worker($worker);
 
     my $hive_pipeline = Bio::EnsEMBL::Hive::HivePipeline->new();
 
