@@ -886,4 +886,15 @@ sub set_log_directory_name {
 }
 
 
+sub temp_directory_name {
+    my $self = shift @_;
+
+    if ($self->adaptor) {
+        return sprintf('/tmp/worker_%s.%s/', $self->meadow_user, $self->dbID);
+    } else {
+        return sprintf('/tmp/worker_%s.standalone.%d/', $self->meadow_user, $self->process_id);
+    }
+}
+
+
 1;
