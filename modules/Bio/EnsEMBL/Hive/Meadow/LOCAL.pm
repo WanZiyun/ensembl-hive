@@ -143,4 +143,10 @@ sub submit_workers {
     }
 }
 
+
+sub delete_temp_directory {
+    my ($self, $meadow_host, $meadow_user, $dir) = @_;
+    return system('rm', '-rf', $dir);
+}
+
 1;

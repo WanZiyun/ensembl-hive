@@ -320,4 +320,11 @@ sub submit_workers {
     system( @cmd ) && die "Could not submit job(s): $!, $?";  # let's abort the beekeeper and let the user check the syntax
 }
 
+
+sub delete_temp_directory {
+    my ($self, $meadow_host, $meadow_user, $dir) = @_;
+    return system('ssh', '-o', 'BatchMode=yes', sprintf('%s@%s', $meadow_user, $meadow_host), 'rm', '-rf', $dir);
+}
+
+
 1;
