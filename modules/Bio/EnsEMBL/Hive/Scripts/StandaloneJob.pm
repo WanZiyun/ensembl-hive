@@ -29,22 +29,12 @@ use Bio::EnsEMBL::Hive::HivePipeline;
 use Bio::EnsEMBL::Hive::Queen;
 use Bio::EnsEMBL::Hive::Utils ('load_file_or_module', 'destringify');
 use Bio::EnsEMBL::Hive::Utils::PCL;
-use Bio::EnsEMBL::Hive::Valley;
 
 
 sub standaloneJob {
     my ($module_or_file, $input_id, $flags, $flow_into, $language) = @_;
 
-    my ($meadow_type, $meadow_name, $process_id, $meadow_host, $meadow_user) = Bio::EnsEMBL::Hive::Valley->new()->whereami();
-
     my $worker = Bio::EnsEMBL::Hive::Queen->create_new_worker(
-
-        # Worker identity:
-        -meadow_type           => $meadow_type,
-        -meadow_name           => $meadow_name,
-        -process_id            => $process_id,
-        -meadow_host           => $meadow_host,
-        -meadow_user           => $meadow_user,
 
         # Worker control parameters:
         #-job_limit             => $job_limit,
