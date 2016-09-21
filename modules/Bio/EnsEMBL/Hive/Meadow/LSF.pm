@@ -323,7 +323,9 @@ sub submit_workers {
 
 sub delete_temp_directory {
     my ($self, $meadow_host, $meadow_user, $dir) = @_;
-    return system('ssh', '-o', 'BatchMode=yes', sprintf('%s@%s', $meadow_user, $meadow_host), 'rm', '-rf', $dir);
+
+    my @extra_args = $self->config_get('StrictHostKeyChecking') ? () : qw(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null);
+    return system('ssh', @extra_args, '-o', 'BatchMode=yes', sprintf('%s@%s', $meadow_user, $meadow_host), 'rm', '-rf', $dir);
 }
 
 
