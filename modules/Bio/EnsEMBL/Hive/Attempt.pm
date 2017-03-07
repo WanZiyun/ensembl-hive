@@ -86,6 +86,19 @@ sub retry_index {
     return $self->{'_retry_index'};
 }
 
+sub stdout_file {
+  my $self = shift;
+  $self->{'_stdout_file'} = shift if(@_);
+  return $self->{'_stdout_file'};
+}
+
+sub stderr_file {
+  my $self = shift;
+  $self->{'_stderr_file'} = shift if(@_);
+  return $self->{'_stderr_file'};
+}
+
+
 
 # --------------------------------- Compound methods ---------------------------------------
 

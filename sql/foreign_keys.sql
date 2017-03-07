@@ -43,7 +43,6 @@ ALTER TABLE dataflow_target         ADD FOREIGN KEY (source_dataflow_rule_id)   
 ALTER TABLE accu                    ADD FOREIGN KEY (sending_job_id)            REFERENCES job(job_id)                          ON DELETE CASCADE;
 ALTER TABLE attempt                 ADD CONSTRAINT  attempt_job_id_fkey         FOREIGN KEY (job_id)                REFERENCES job(job_id)                  ON DELETE CASCADE;
 ALTER TABLE job                     ADD CONSTRAINT  job_prev_job_id_fkey        FOREIGN KEY (prev_job_id)           REFERENCES job(job_id)                  ON DELETE CASCADE;
-ALTER TABLE job_file                ADD CONSTRAINT  job_file_job_id_fkey        FOREIGN KEY (job_id)                REFERENCES job(job_id)                  ON DELETE CASCADE;
 ALTER TABLE log_message             ADD FOREIGN KEY (job_id)                    REFERENCES job(job_id)                          ON DELETE CASCADE;
 ALTER TABLE semaphore               ADD CONSTRAINT  semaphore_dependent_job_id_fkey     FOREIGN KEY (dependent_job_id)          REFERENCES job(job_id)              ON DELETE CASCADE;
 
@@ -53,7 +52,6 @@ ALTER TABLE worker                  ADD FOREIGN KEY (resource_class_id)         
 
 ALTER TABLE attempt                 ADD CONSTRAINT  attempt_role_id_fkey        FOREIGN KEY (role_id)               REFERENCES role(role_id)                ON DELETE CASCADE;
 ALTER TABLE job                     ADD CONSTRAINT  job_role_id_fkey            FOREIGN KEY (role_id)               REFERENCES role(role_id)                ON DELETE CASCADE;
-ALTER TABLE job_file                ADD CONSTRAINT  job_file_role_id_fkey       FOREIGN KEY (role_id)               REFERENCES role(role_id)                ON DELETE CASCADE;
 ALTER TABLE log_message             ADD FOREIGN KEY (role_id)                   REFERENCES role(role_id)                        ON DELETE CASCADE;
 
 ALTER TABLE log_message             ADD FOREIGN KEY (worker_id)                 REFERENCES worker(worker_id)                    ON DELETE CASCADE;

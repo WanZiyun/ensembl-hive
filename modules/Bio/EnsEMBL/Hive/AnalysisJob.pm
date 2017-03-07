@@ -120,18 +120,6 @@ sub set_and_update_status {
     }
 }
 
-sub stdout_file {
-  my $self = shift;
-  $self->{'_stdout_file'} = shift if(@_);
-  return $self->{'_stdout_file'};
-}
-
-sub stderr_file {
-  my $self = shift;
-  $self->{'_stderr_file'} = shift if(@_);
-  return $self->{'_stderr_file'};
-}
-
 sub accu_hash {
     my $self = shift;
     $self->{'_accu_hash'} = shift if(@_);

@@ -93,5 +93,22 @@ sub check_in_attempt {
 }
 
 
+=head2 store_out_files
+
+  Arg [1]    : Bio::EnsEMBL::Hive::Attempt $attempt
+  Description: update locations of log files, if present
+  Returntype : Boolean: whether the attempt has been updated in the database or not
+  Exceptions : None
+  Caller     : Bio::EnsEMBL::Hive::Worker
+
+=cut
+
+sub store_out_files {
+    my ($self, $attempt) = @_;
+
+    return $self->update_stdout_file_AND_stderr_file($attempt);
+}
+
+
 1;
 

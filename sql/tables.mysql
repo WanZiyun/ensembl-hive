@@ -388,6 +388,8 @@ CREATE TABLE attempt (
     when_updated            TIMESTAMP                    NULL,      -- mysql's special for "TIMESTAMP DEFAULT NULL"
     runtime_msec            INTEGER              DEFAULT NULL,
     query_count             INTEGER              DEFAULT NULL,
+    stdout_file             VARCHAR(255),
+    stderr_file             VARCHAR(255),
 
     UNIQUE  KEY job_id_retry_index          (job_id, retry_index),                                  -- to avoid repeating tasks
             KEY role                        (role_id)                                               -- for finding the attemps linked to a role (not used by the current code)
@@ -419,36 +421,6 @@ CREATE TABLE semaphore (
     dependent_semaphore_url     VARCHAR(255)        DEFAULT NULL,                                   --  we expect either one or the other to be set.
 
     UNIQUE KEY unique_dependent_job_id (dependent_job_id)                                           -- make sure two semaphores do not block the same job
-) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
-
-
-
-/**
-@table  job_file
-
-@colour #1D73DA
-
-@desc   For testing/debugging purposes both STDOUT and STDERR streams of each Job
-        can be redirected into a separate log file.
-        This table holds filesystem paths to one or both of those files.
-        There is max one entry per job_id and retry.
-
-@column job_id             foreign key
-@column retry              copy of retry_count of job as it was run
-@column role_id            links to the Role that claimed this job
-@column stdout_file        path to the job's STDOUT log
-@column stderr_file        path to the job's STDERR log
-*/
-
-CREATE TABLE job_file (
-    job_id                  INTEGER     NOT NULL,
-    retry                   INTEGER     NOT NULL,
-    role_id                 INTEGER     NOT NULL,
-    stdout_file             VARCHAR(255),
-    stderr_file             VARCHAR(255),
-
-    PRIMARY KEY job_retry   (job_id, retry),
-            KEY role        (role_id)
 ) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
 
 
