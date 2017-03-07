@@ -104,6 +104,12 @@ sub retry_count {
     return $self->{'_retry_count'};
 }
 
+sub when_created {
+    my $self = shift;
+    $self->{'_when_created'} = shift if(@_);
+    return $self->{'_when_created'};
+}
+
 sub when_completed {
     my $self = shift;
     $self->{'_when_completed'} = shift if(@_);

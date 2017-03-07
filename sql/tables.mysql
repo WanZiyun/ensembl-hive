@@ -340,6 +340,7 @@ CREATE TABLE job (
     input_id                CHAR(255)   NOT NULL,
     param_id_stack          CHAR(64)    NOT NULL DEFAULT '',
     accu_id_stack           CHAR(64)    NOT NULL DEFAULT '',
+    when_created            TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
     role_id                 INTEGER              DEFAULT NULL,
     last_attempt_id         INTEGER              DEFAULT NULL,  -- the last attempt registered for this job
     status                  ENUM('SEMAPHORED','READY','CLAIMED','IN_PROGRESS','DONE','FAILED','PASSED_ON') DEFAULT 'READY' NOT NULL,
