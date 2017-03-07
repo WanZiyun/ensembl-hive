@@ -129,6 +129,11 @@ sub life_cycle {
     $job->autoflow(1);
 
     eval {
+        $job->set_and_update_status( 'IN_PROGRESS' );
+        if(my $worker = $self->worker) {
+            $worker->set_and_update_status( 'JOB_LIFECYCLE' );  # to ensure when_checked_in TIMESTAMP is updated
+        }
+
         if( $self->can('pre_cleanup') and $job->retry_count()>0 ) {
             $self->enter_status('PRE_CLEANUP');
             $self->pre_cleanup;
@@ -214,13 +219,7 @@ sub say_with_header {
 sub enter_status {
     my ($self, $status) = @_;
 
-    my $job = $self->input_job();
-
-    $job->set_and_update_status( $status );
-
-    if(my $worker = $self->worker) {
-        $worker->set_and_update_status( 'JOB_LIFECYCLE' );  # to ensure when_checked_in TIMESTAMP is updated
-    }
+    $self->attempt->set_and_update_status( $status );
 
     $self->say_with_header( '-> '.$status );
 }
@@ -494,13 +493,30 @@ sub run_system_command {
 sub input_job {
     my $self = shift @_;
 
+    return $self->attempt->job if $self->attempt;
+}
+
+
+=head2 attempt
+
+    Title   :  attempt
+    Function:  Returns the job attempt to be run by this process
+               Subclasses should treat this as a read_only object.
+    Returns :  Bio::EnsEMBL::Hive::Attempt object
+
+=cut
+
+sub attempt {
+    my $self = shift @_;
+
     if(@_) {
-        if(my $job = $self->{'_input_job'} = shift) {
-            throw("Not a Bio::EnsEMBL::Hive::AnalysisJob object") unless ($job->isa("Bio::EnsEMBL::Hive::AnalysisJob"));
+        if(my $attempt = $self->{'_attempt'} = shift) {
+            throw("Not a Bio::EnsEMBL::Hive::Attempt object") unless ($attempt->isa("Bio::EnsEMBL::Hive::Attempt"));
         }
     }
-    return $self->{'_input_job'};
+    return $self->{'_attempt'};
 }
+
 
 
 # ##################### subroutines that link through to Job's methods #########################

@@ -341,11 +341,10 @@ CREATE TABLE job (
     param_id_stack          CHAR(64)    NOT NULL DEFAULT '',
     accu_id_stack           CHAR(64)    NOT NULL DEFAULT '',
     role_id                 INTEGER              DEFAULT NULL,
-    status                  ENUM('SEMAPHORED','READY','CLAIMED','COMPILATION','PRE_CLEANUP','FETCH_INPUT','RUN','WRITE_OUTPUT','POST_HEALTHCHECK','POST_CLEANUP','DONE','FAILED','PASSED_ON') DEFAULT 'READY' NOT NULL,
+    last_attempt_id         INTEGER              DEFAULT NULL,  -- the last attempt registered for this job
+    status                  ENUM('SEMAPHORED','READY','CLAIMED','IN_PROGRESS','DONE','FAILED','PASSED_ON') DEFAULT 'READY' NOT NULL,
     retry_count             INTEGER     NOT NULL DEFAULT 0,
     when_completed          TIMESTAMP                    NULL,      -- mysql's special for "TIMESTAMP DEFAULT NULL"
-    runtime_msec            INTEGER              DEFAULT NULL,
-    query_count             INTEGER              DEFAULT NULL,
 
     controlled_semaphore_id INTEGER              DEFAULT NULL,      -- terminology: fan jobs CONTROL semaphores; funnel jobs or remote semaphores DEPEND ON (local) semaphores
 
@@ -354,6 +353,45 @@ CREATE TABLE job (
             KEY role_status                 (role_id, status)                                       -- for fetching and releasing claimed jobs
 ) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
 
+/**
+@table  attempt
+
+@colour #1D73DA
+
+@desc The job table is the heart of this system.  It is the kiosk or blackboard
+    where workers find things to do and then post work for other works to do.
+    These jobs are created prior to work being done, are claimed by workers,
+    are updated as the work is done, with a final update on completion.
+
+@column job_id                  autoincrement id
+@column prev_job_id             previous job which created this one
+@column analysis_id             the analysis_id needed to accomplish this job.
+@column input_id                input data passed into Analysis:RunnableDB to control the work
+@column param_id_stack          a CSV of job_ids whose input_ids contribute to the stack of local variables for the job
+@column accu_id_stack           a CSV of job_ids whose accu's contribute to the stack of local variables for the job
+@column role_id                 links to the Role that claimed this job (NULL means it has never been claimed)
+@column status                  state the job is in
+@column retry_count             number times job had to be reset when worker failed to run it
+@column when_completed          when the job was completed
+@column runtime_msec            how long did it take to execute the job (or until the moment it failed)
+@column query_count             how many SQL queries were run during this job
+@column controlled_semaphore_id the dbID of the semaphore that is controlled by this job (and whose counter it will decrement by 1 upon successful completion)
+*/
+
+CREATE TABLE attempt (
+    attempt_id              INTEGER     NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    role_id                 INTEGER     NOT NULL,
+    job_id                  INTEGER     NOT NULL,                  -- the job this attempt is about
+    retry_index             INTEGER     NOT NULL DEFAULT 0,
+    status                  ENUM('INITIALIZATION','PRE_CLEANUP','FETCH_INPUT','RUN','WRITE_OUTPUT','POST_HEALTHCHECK','POST_CLEANUP','EXIT') DEFAULT 'INITIALIZATION' NOT NULL,
+    when_initialized        TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    when_updated            TIMESTAMP                    NULL,      -- mysql's special for "TIMESTAMP DEFAULT NULL"
+    runtime_msec            INTEGER              DEFAULT NULL,
+    query_count             INTEGER              DEFAULT NULL,
+
+    UNIQUE  KEY job_id_retry_index          (job_id, retry_index),                                  -- to avoid repeating tasks
+            KEY role                        (role_id)                                               -- for finding the attemps linked to a role (not used by the current code)
+) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
 
 /**
 @table  semaphore

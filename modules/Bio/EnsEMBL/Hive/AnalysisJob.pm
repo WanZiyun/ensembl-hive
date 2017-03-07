@@ -40,6 +40,7 @@ package Bio::EnsEMBL::Hive::AnalysisJob;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Hive::Attempt;
 use Bio::EnsEMBL::Hive::Utils ('stringify', 'destringify', 'throw');
 use Bio::EnsEMBL::Hive::DBSQL::DataflowRuleAdaptor;
 use Bio::EnsEMBL::Hive::TheApiary;
@@ -109,21 +110,6 @@ sub when_completed {
     return $self->{'_when_completed'};
 }
 
-sub runtime_msec {
-    my $self = shift;
-    $self->{'_runtime_msec'} = shift if(@_);
-    $self->{'_runtime_msec'} = 0 unless(defined($self->{'_runtime_msec'}));
-    return $self->{'_runtime_msec'};
-}
-
-sub query_count {
-    my $self = shift;
-    $self->{'_query_count'} = shift if(@_);
-    $self->{'_query_count'} = 0 unless(defined($self->{'_query_count'}));
-    return $self->{'_query_count'};
-}
-
-
 sub set_and_update_status {
     my ($self, $status ) = @_;
 
@@ -172,6 +158,25 @@ sub autoflow {
   $self->{'_autoflow'} = 1 unless(defined($self->{'_autoflow'}));  
 
   return $self->{'_autoflow'};
+}
+
+
+sub create_new_attempt {
+    my ($self, $role) = @_;
+
+    my $attempt = Bio::EnsEMBL::Hive::Attempt->new(
+        'role'  => $role,
+        'job'   => $self,
+        'retry_index' => $self->retry_count,
+    );
+
+    my $job_adaptor = $self->adaptor;
+
+    $job_adaptor->db->get_AttemptAdaptor->store($attempt)   if $job_adaptor;
+    $self->last_attempt($attempt);
+    $job_adaptor->update_last_attempt_id($self)             if $job_adaptor;
+
+    return $attempt;
 }
 
 

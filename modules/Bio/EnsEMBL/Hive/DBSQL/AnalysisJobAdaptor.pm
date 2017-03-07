@@ -52,11 +52,6 @@ use Bio::EnsEMBL::Hive::Utils ('stringify', 'destringify');
 use base ('Bio::EnsEMBL::Hive::DBSQL::ObjectAdaptor');
 
 
-# This variable must be kept up-to-date ! It is used in a number of queries.
-# CLAIMED is missing on purpose because not all the queries actually need it.
-my $ALL_STATUSES_OF_RUNNING_JOBS = q{'PRE_CLEANUP','FETCH_INPUT','RUN','WRITE_OUTPUT','POST_HEALTHCHECK','POST_CLEANUP'};
-
-
 sub default_table_name {
     return 'job';
 }
@@ -370,7 +365,7 @@ sub fetch_some_by_analysis_id_limit {
 sub fetch_all_incomplete_jobs_by_role_id {
     my ($self, $role_id) = @_;
 
-    my $constraint = "status IN ('CLAIMED',$ALL_STATUSES_OF_RUNNING_JOBS) AND role_id='$role_id'";
+    my $constraint = "status IN ('CLAIMED','IN_PROGRESS') AND role_id='$role_id'";
     return $self->fetch_all($constraint);
 }
 
@@ -378,8 +373,7 @@ sub fetch_all_incomplete_jobs_by_role_id {
 sub fetch_all_unfinished_jobs_with_no_roles {
     my $self = shift;
 
-        # the list should contain all status'es that are not "in progress":
-    return $self->fetch_all( "role_id IS NULL AND status NOT IN ('DONE', 'READY', 'FAILED', 'PASSED_ON', 'SEMAPHORED')" );
+    return $self->fetch_all( "role_id IS NULL AND status IN ('CLAIMED', 'IN_PROGRESS')" );
 }
 
 
@@ -481,11 +475,8 @@ sub check_in_job {
 
     if($job->status eq 'DONE') {
         $sql .= ",when_completed=CURRENT_TIMESTAMP";
-        $sql .= ",runtime_msec=".$job->runtime_msec;
-        $sql .= ",query_count=".$job->query_count;
     } elsif($job->status eq 'PASSED_ON') {
         $sql .= ", when_completed=CURRENT_TIMESTAMP";
-    } elsif($job->status eq 'READY') {
     }
 
     $sql .= " WHERE job_id='$job_id' ";
@@ -589,6 +580,13 @@ sub grab_jobs_for_role {
     my $role_rank       = $self->db->get_RoleAdaptor->get_role_rank( $role );
     my $offset          = $how_many_this_batch * $role_rank;
 
+#    my $make_attempts_sql = ($self->dbc->driver eq 'mysql') ? qq{
+#         INSERT IGNORE INTO attempt (role_id, job_id, retry_index)
+#         SELECT $role_id, job_id, retry_count
+#         FROM job
+#         WHERE analysis_id='$analysis_id'
+#           AND status = 'READY'
+
     my $prefix_sql = ($self->dbc->driver eq 'mysql') ? qq{
          UPDATE job j
            JOIN (
@@ -617,6 +615,11 @@ sub grab_jobs_for_role {
                  )
            AND status='READY'
     };
+#    my $claim_sql  = qq{
+#         UPDATE job JOIN attempt USING (job_id)
+#            SET last_attempt_id = attempt_id,
+#                job.status = 'CLAIMED'
+#          WHERE role_id='$role_id'
 
     my $claim_count;
 
@@ -633,6 +636,9 @@ sub grab_jobs_for_role {
         }
     }
 
+#    $claim_count = $self->dbc->protected_prepare_execute( [ $claim_sql ],
+#        sub { my ($after) = @_; $self->db->get_LogMessageAdaptor->store_worker_message( $role->worker, "registering jobs as claimed".$after, 'INFO' ); }
+#    );
     $self->db->get_AnalysisStatsAdaptor->increment_a_counter( 'ready_job_count', -$claim_count, $analysis_id );
 
     return $claim_count ? $self->fetch_all_by_role_id_AND_status($role_id, 'CLAIMED') : [];
@@ -664,8 +670,8 @@ sub release_claimed_jobs_from_role {
   Description: If a Worker has died some of its jobs need to be reset back to 'READY'
                so they can be rerun.
                Jobs in state CLAIMED as simply reset back to READY.
-               If jobs was 'in progress' (see the $ALL_STATUSES_OF_RUNNING_JOBS variable)
-               the retry_count is increased and the status set back to READY.
+               If jobs was 'in progress', the retry_count is increased and the status
+               set back to READY.
                If the retry_count >= $max_retry_count (3 by default) the job is set
                to 'FAILED' and not rerun again.
   Exceptions : $role must be defined
@@ -688,7 +694,7 @@ sub release_undone_jobs_from_role {
         SELECT job_id
           FROM job
          WHERE role_id='$role_id'
-           AND status in ($ALL_STATUSES_OF_RUNNING_JOBS)
+           AND status = 'IN_PROGRESS'
     } );
     $sth->execute();
 
@@ -725,12 +731,11 @@ sub release_undone_jobs_from_role {
 
 
 sub release_and_age_job {
-    my ($self, $job_id, $max_retry_count, $may_retry, $runtime_msec) = @_;
+    my ($self, $job_id, $max_retry_count, $may_retry) = @_;
 
     # Default values
     $max_retry_count //= $self->db->hive_pipeline->hive_default_max_retry_count;
     $may_retry ||= 0;
-    $runtime_msec = "NULL" unless(defined $runtime_msec);
 
         # NB: The order of updated fields IS important. Here we first find out the new status and then increment the retry_count:
         #
@@ -742,10 +747,9 @@ sub release_and_age_job {
             ? "SET status = CAST(CASE WHEN ($may_retry != 0) AND (retry_count<$max_retry_count) THEN 'READY' ELSE 'FAILED' END AS job_status), "
             : "SET status =      CASE WHEN $may_retry AND (retry_count<$max_retry_count) THEN 'READY' ELSE 'FAILED' END, "
          ).qq{
-               retry_count=retry_count+1,
-               runtime_msec=$runtime_msec
+               retry_count=retry_count+1
          WHERE job_id=$job_id
-           AND status in ('CLAIMED',$ALL_STATUSES_OF_RUNNING_JOBS)
+           AND status in ('CLAIMED','IN_PROGRESS')
     } );
 
         # FIXME: move the decision making completely to the API side and so avoid the potential race condition.
@@ -855,7 +859,7 @@ sub reset_jobs_for_analysis_id {
                  WHERE job.job_id=j.job_id AND $analyses_filter $statuses_filter
         } : qq{
 
-            REPLACE INTO job (job_id, prev_job_id, analysis_id, input_id, param_id_stack, accu_id_stack, role_id, status, retry_count, when_completed, runtime_msec, query_count, controlled_semaphore_id)
+            REPLACE INTO job (job_id, prev_job_id, analysis_id, input_id, param_id_stack, accu_id_stack, role_id, status, retry_count, when_completed, controlled_semaphore_id)
                   SELECT j.job_id,
                          j.prev_job_id,
                          j.analysis_id,
@@ -866,8 +870,6 @@ sub reset_jobs_for_analysis_id {
                          CASE WHEN s.local_jobs_counter+s.remote_jobs_counter>0 THEN 'SEMAPHORED' ELSE 'READY' END,
                          CASE WHEN j.status='READY' THEN 0 ELSE 1 END,
                          j.when_completed,
-                         j.runtime_msec,
-                         j.query_count,
                          j.controlled_semaphore_id
                     FROM job j
                LEFT JOIN semaphore s

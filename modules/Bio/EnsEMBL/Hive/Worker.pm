@@ -686,7 +686,9 @@ sub run_one_batch {
     ONE_BATCH: while(my $job = shift @$jobs) {         # to make sure jobs go out of scope without undue delay
 
         my $job_id = $job->dbID();
-        $self->worker_say( $job->toString ) if($self->debug); 
+        my $attempt = $job->create_new_attempt($current_role);
+        $self->worker_say( $attempt->toString ) if $self->debug;
+        #my $attempt = $job->last_attempt;  # If the claiming process creates the attempts for us
 
         my $job_stopwatch = Bio::EnsEMBL::Hive::Utils::Stopwatch->new();
         $job_partial_timing = {};
@@ -694,7 +696,7 @@ sub run_one_batch {
         $self->start_job_output_redirection($job);  # switch logging into job's STDERR
         eval {  # capture any throw/die
             my $runnable_object = $self->runnable_object();
-            $runnable_object->input_job( $job );    # "take" the job
+            $runnable_object->attempt( $attempt );  # "take" the job
 
             $job->incomplete(1);
             $self->adaptor->db->dbc->query_count(0);
@@ -712,9 +714,10 @@ sub run_one_batch {
         }
 
             # whether the job completed successfully or not:
-        $self->runnable_object->input_job( undef );   # release an extra reference to the job
-        $job->runtime_msec( $job_stopwatch->get_elapsed );
-        $job->query_count( $self->adaptor->db->dbc->query_count );
+        $self->runnable_object->attempt( undef );   # release an extra reference to the job
+        $attempt->runtime_msec( $job_stopwatch->get_elapsed );
+        $attempt->query_count( $self->adaptor->db->dbc->query_count );
+        $attempt->adaptor->check_in_attempt($attempt, 'finalize_attempt', !$job->died_somewhere);
 
         my $job_completion_line = "Job $job_id : ". ($job->died_somewhere ? 'died' : 'complete' );
 
@@ -730,7 +733,7 @@ sub run_one_batch {
                 # not to retry jobs, follow their wish.
             my $may_retry = $job->transient_error && $self->retry_throwing_jobs;
 
-            $job->adaptor->release_and_age_job( $job_id, $max_retry_count, $may_retry, $job->runtime_msec );
+            $job->adaptor->release_and_age_job( $job_id, $max_retry_count, $may_retry );
 
             if( $self->prev_job_error                # a bit of AI: if the previous job failed as well, it is LIKELY that we have contamination
              or $job->lethal_for_worker ) {          # trust the job's expert knowledge
