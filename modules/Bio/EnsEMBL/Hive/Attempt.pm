@@ -121,6 +121,22 @@ sub failure_level {       # Job should set this to 1 prior to dying (or before r
     return lc($self->{'_failure_level'} // 'attempt');
 }
 
+
+sub incomplete {            # Job should set this to 0 prior to throwing if the job is done,
+                            # but it wants the thrown message to be recorded with is_error=0.
+    my $self = shift;
+    $self->{'_incomplete'} = shift if(@_);
+    return $self->{'_incomplete'};
+}
+
+
+sub died_somewhere {
+    my $self = shift;
+
+    $self->{'_died_somewhere'} ||= shift if(@_);    # NB: the '||=' only applies in this case - do not copy around!
+    return $self->{'_died_somewhere'} ||=0;
+}
+
 ##-----------------[/indicators to the Worker]-------------------------------
 
 

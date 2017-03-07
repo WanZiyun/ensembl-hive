@@ -374,7 +374,7 @@ sub dataflow {
 
             if( (my $funnel_job_count = scalar(@$output_ids_for_this_rule)) !=1 ) {
 
-                $emitting_job->transient_error(0);
+                $emitting_job->last_attempt->transient_error(0);
                 die "Asked to dataflow into $funnel_job_count funnel jobs instead of 1";
 
             } else {

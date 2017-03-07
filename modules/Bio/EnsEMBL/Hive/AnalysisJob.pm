@@ -196,19 +196,14 @@ sub transient_error {       ## DEPRECATED
     return ($self->last_attempt->failure_level() eq 'attempt') ? 1 : 0;
 }
 
-sub incomplete {            # Job should set this to 0 prior to throwing if the job is done,
-                            # but it wants the thrown message to be recorded with is_error=0.
+sub incomplete {            ## DEPRECATED
     my $self = shift;
-    $self->{'_incomplete'} = shift if(@_);
-    return $self->{'_incomplete'};
+    return $self->last_attempt->incomplete(@_);
 }
 
-
-sub died_somewhere {
+sub died_somewhere {        ## DEPRECATED
     my $self = shift;
-
-    $self->{'_died_somewhere'} ||= shift if(@_);    # NB: the '||=' only applies in this case - do not copy around!
-    return $self->{'_died_somewhere'} ||=0;
+    return $self->last_attempt->died_somewhere(@_);
 }
 
 ##-----------------[/indicators to the Worker]-------------------------------
@@ -361,10 +356,10 @@ sub dataflow_output_id {
                     my $same_db_dataflow    = $self->analysis->hive_pipeline == $target_object->hive_pipeline;
 
                     unless($same_db_dataflow) {
-                        my $prev_transient_error = $self->transient_error(); # make a note of previously set transience status
-                        $self->transient_error(0);
+                        my $prev_transient_error = $self->last_attempt->transient_error(); # make a note of previously set transience status
+                        $self->last_attempt->transient_error(0);
                         @$output_ids_for_this_rule = map { $self->flattened_stack_and_accu( $_, $extend_param_stack ); } @$output_ids_for_this_rule;
-                        $self->transient_error($prev_transient_error);
+                        $self->last_attempt->transient_error($prev_transient_error);
                     }
 
                     my ($stored_listref) = $target_object->dataflow( $output_ids_for_this_rule, $self, $same_db_dataflow, $extend_param_stack, $df_rule );

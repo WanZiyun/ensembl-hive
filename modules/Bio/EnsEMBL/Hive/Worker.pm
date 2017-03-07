@@ -705,7 +705,7 @@ sub run_one_batch {
             my $runnable_object = $self->runnable_object();
             $runnable_object->attempt( $attempt );  # "take" the job
 
-            $job->incomplete(1);
+            $attempt->incomplete(1);
             $self->adaptor->db->dbc->query_count(0);
             $job_stopwatch->restart();
 
@@ -716,8 +716,8 @@ sub run_one_batch {
             $job_partial_timing = $runnable_object->life_cycle();
         };
         if(my $msg = $@) {
-            $job->died_somewhere( $job->incomplete );  # it will be OR'd inside
-            Bio::EnsEMBL::Hive::Process::warning($self->runnable_object, $msg, $job->incomplete?'WORKER_ERROR':'INFO');   # In case the Runnable has redefined warning()
+            $attempt->died_somewhere( $attempt->incomplete );  # it will be OR'd inside
+            Bio::EnsEMBL::Hive::Process::warning($self->runnable_object, $msg, $attempt->incomplete?'WORKER_ERROR':'INFO');   # In case the Runnable has redefined warning()
         }
 
             # whether the job completed successfully or not:
@@ -726,17 +726,17 @@ sub run_one_batch {
         $attempt->query_count( $self->adaptor->db->dbc->query_count );
         $attempt->adaptor->check_in_attempt($attempt, 'finalize_attempt', !$job->died_somewhere);
 
-        my $job_completion_line = "Job $job_id : ". ($job->died_somewhere ? 'died' : 'complete' );
+        my $job_completion_line = "Job $job_id : ". ($attempt->died_somewhere ? 'died' : 'complete' );
 
-        print STDERR "\n$job_completion_line\n" if($self->log_dir and ($self->debug or $job->died_somewhere));  # one copy goes to the job's STDERR
+        print STDERR "\n$job_completion_line\n" if($self->log_dir and ($self->debug or $attempt->died_somewhere));  # one copy goes to the job's STDERR
         $self->stop_job_output_redirection($attempt);                                                           # and then we switch back to worker's STDERR
         $self->worker_say( $job_completion_line );                                                              # one copy goes to the worker's STDERR
 
-        $self->current_role->register_attempt( ! $job->died_somewhere );
+        $self->current_role->register_attempt( ! $attempt->died_somewhere );
 
         my %agent2contamination = ('Role' => 'ROLE_CONTAMINATED', 'Beekeeper' => 'BEEKEEPER_CONTAMINTATED', 'Worker' => 'CONTAMINATED');
 
-        if($job->died_somewhere) {
+        if($attempt->died_somewhere) {
             my $failure_level = $attempt->failure_level;
             my $may_retry = ($failure_level eq 'attempt') && $self->retry_throwing_jobs;
 
@@ -777,7 +777,7 @@ sub run_one_batch {
             }
         }
 
-        $self->prev_job_error( $job->died_somewhere );
+        $self->prev_job_error( $attempt->died_somewhere );
         $self->enter_status('READY');
 
             # UNCLAIM THE SURPLUS:
@@ -851,7 +851,7 @@ sub stop_job_output_redirection {
         $self->get_stdout_redirector->pop();
         $self->get_stderr_redirector->pop();
 
-        my $force_cleanup = !($self->debug || $attempt->job->died_somewhere);
+        my $force_cleanup = !($self->debug || $attempt->died_somewhere);
 
         if($force_cleanup or -z $attempt->stdout_file) {
             $self->worker_say( "Deleting '".$attempt->stdout_file."' file" );

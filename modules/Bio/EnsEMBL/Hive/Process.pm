@@ -122,10 +122,11 @@ sub life_cycle {
     my ($self) = @_;
 
     my $job = $self->input_job();
+    my $attempt = $self->attempt();
     my $partial_stopwatch = Bio::EnsEMBL::Hive::Utils::Stopwatch->new();
     my %job_partial_timing = ();
 
-    $job->incomplete(1);    # reinforce, in case the life_cycle is not run by a Worker
+    $attempt->incomplete(1);    # reinforce, in case the life_cycle is not run by a Worker
     $job->autoflow(1);
 
     eval {
@@ -165,23 +166,23 @@ sub life_cycle {
     };
 
     if(my $life_cycle_msg = $@) {
-        $job->died_somewhere( $job->incomplete );  # it will be OR'd inside
-        Bio::EnsEMBL::Hive::Process::warning($self, $life_cycle_msg, $job->incomplete?'WORKER_ERROR':'INFO');     # In case the Runnable has redefined warning()
+        $attempt->died_somewhere( $attempt->incomplete );  # it will be OR'd inside
+        Bio::EnsEMBL::Hive::Process::warning($self, $life_cycle_msg, $attempt->incomplete?'WORKER_ERROR':'INFO');     # In case the Runnable has redefined warning()
     }
 
     if( $self->can('post_cleanup') ) {   # may be run to clean up memory even after partially failed attempts
         eval {
-            $job->incomplete(1);    # it could have been reset by a previous call to complete_early
+            $attempt->incomplete(1);    # it could have been reset by a previous call to complete_early
             $self->enter_status('POST_CLEANUP');
             $self->post_cleanup;
         };
         if(my $post_cleanup_msg = $@) {
-            $job->died_somewhere( $job->incomplete );  # it will be OR'd inside
-            Bio::EnsEMBL::Hive::Process::warning($self, $post_cleanup_msg, $job->incomplete?'WORKER_ERROR':'INFO');   # In case the Runnable has redefined warning()
+            $attempt->died_somewhere( $attempt->incomplete );  # it will be OR'd inside
+            Bio::EnsEMBL::Hive::Process::warning($self, $post_cleanup_msg, $attempt->incomplete?'WORKER_ERROR':'INFO');   # In case the Runnable has redefined warning()
         }
     }
 
-    unless( $job->died_somewhere ) {
+    unless( $attempt->died_somewhere ) {
 
         if( $self->execute_writes and $job->autoflow ) {    # AUTOFLOW doesn't have its own status so will have whatever previous state of the job
             $self->say_with_header( ': AUTOFLOW input->output' );
@@ -190,11 +191,11 @@ sub life_cycle {
 
         my @zombie_funnel_dataflow_rule_ids = keys %{$job->fan_cache};
         if( scalar(@zombie_funnel_dataflow_rule_ids) ) {
-            $job->transient_error(0);
+            $attempt->transient_error(0);
             die "The group of semaphored jobs is incomplete ! Some fan jobs (coming from dataflow_rule_id(s) ".join(',',@zombie_funnel_dataflow_rule_ids).") are missing a job on their funnel. Check the order of your dataflow_output_id() calls.";
         }
 
-        $job->incomplete(0);
+        $attempt->incomplete(0);
 
         return \%job_partial_timing;
     }
@@ -536,12 +537,12 @@ sub param {
 sub param_required {
     my $self = shift @_;
 
-    my $prev_transient_error = $self->input_job->transient_error(); # make a note of previously set transience status
-    $self->input_job->transient_error(0);                           # make sure if we die in param_required it is not transient
+    my $prev_transient_error = $self->attempt->transient_error(); # make a note of previously set transience status
+    $self->attempt->transient_error(0);                           # make sure if we die in param_required it is not transient
 
     my $value = $self->input_job->param_required(@_);
 
-    $self->input_job->transient_error($prev_transient_error);       # restore the previous transience status
+    $self->attempt->transient_error($prev_transient_error);       # restore the previous transience status
     return $value;
 }
 
@@ -575,7 +576,7 @@ sub throw {
 sub complete_early {
     my ($self, $msg) = @_;
 
-    $self->input_job->incomplete(0);
+    $self->attempt->incomplete(0);
     die $msg;
 }
 

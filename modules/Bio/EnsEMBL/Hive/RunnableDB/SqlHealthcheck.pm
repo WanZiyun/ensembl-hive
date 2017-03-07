@@ -123,7 +123,7 @@ sub run {
         # Transient errors like lost access to the database, etc, tend to
         # make the job die in _run_test(). If we've passed this point, the
         # test geneuinely failed, and it will fail again anyway
-        $self->input_job->transient_error(0);
+        $self->attempt->transient_error(0);
         die "The following tests have failed:\n".join('', map {sprintf(" - %s\n   > %s\n", $_->{description}, $_->{subst_query})} @failures);
     }
 }

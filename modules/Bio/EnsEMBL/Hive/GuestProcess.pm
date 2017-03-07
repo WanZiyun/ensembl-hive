@@ -544,11 +544,11 @@ sub life_cycle {
 
                 my @zombie_funnel_dataflow_rule_ids = keys %{$job->fan_cache};
                 if( scalar(@zombie_funnel_dataflow_rule_ids) ) {
-                    $job->transient_error(0);
+                    $attempt->transient_error(0);
                     die "There are cached semaphored fans for which a funnel job (dataflow_rule_id(s) ".join(',',@zombie_funnel_dataflow_rule_ids).") has never been dataflown";
                 }
             } else {
-                $job->died_somewhere(1);
+                $attempt->died_somewhere(1);
             }
             $self->send_response('OK');
             return \%job_partial_timing;

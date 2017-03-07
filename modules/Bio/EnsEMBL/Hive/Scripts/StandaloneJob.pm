@@ -67,7 +67,7 @@ sub standaloneJob {
 
     $runnable_object->cleanup_worker_temp_directory() unless $flags->{no_cleanup};
 
-    return !$job->died_somewhere()
+    return !$attempt->died_somewhere()
 }
 
 

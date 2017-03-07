@@ -149,7 +149,7 @@ sub fetch_input {
     my $src_dbc = $src_db_conn ? go_figure_dbc($src_db_conn) : $self->data_dbc;
     $self->param('src_dbc', $src_dbc);
 
-    $self->input_job->transient_error(0);
+    $self->attempt->transient_error(0);
     die 'Only the "mysql" driver is supported.' if $src_dbc->driver ne 'mysql';
 
     my @ehive_tables = ();
@@ -200,7 +200,7 @@ sub fetch_input {
         die 'Only the "mysql" driver is supported.' if $self->param('real_output_db')->driver ne 'mysql';
     }
 
-    $self->input_job->transient_error(1);
+    $self->attempt->transient_error(1);
 
     print "tables: ", scalar(@tables), " ", join('/', @tables), "\n" if $self->debug;
     print "ignores: ", scalar(@ignores), " ", join('/', @ignores), "\n" if $self->debug;

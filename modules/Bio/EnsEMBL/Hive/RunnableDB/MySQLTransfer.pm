@@ -86,12 +86,12 @@ sub fetch_input {
     my $src_db_conn  = $self->param('src_db_conn');
     my $dest_db_conn = $self->param('dest_db_conn');
 
-    $self->input_job->transient_error(0);
+    $self->attempt->transient_error(0);
     if($src_db_conn eq $dest_db_conn) {
         die "Please either specify 'src_db_conn' or 'dest_db_conn' or make them different\n";
     }
     my $table = $self->param_required('table');
-    $self->input_job->transient_error(1);
+    $self->attempt->transient_error(1);
 
     my $src_dbc     = $src_db_conn  ? go_figure_dbc( $src_db_conn )  : $self->data_dbc;
     my $dest_dbc    = $dest_db_conn ? go_figure_dbc( $dest_db_conn ) : $self->data_dbc;
