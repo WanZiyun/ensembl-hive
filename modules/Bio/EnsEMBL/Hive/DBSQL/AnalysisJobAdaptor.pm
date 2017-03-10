@@ -508,8 +508,7 @@ sub reset_or_grab_job_by_dbID {
         # Note: the order of the fields being updated is critical!
     my $sql = qq{
         UPDATE job
-           SET retry_count = CASE WHEN (status='READY' OR status='CLAIMED') THEN retry_count ELSE 1 END
-             , status=?
+           SET status=?
              , role_id=?
          WHERE job_id=?
     };
@@ -818,12 +817,12 @@ sub reset_jobs_for_analysis_id {
                 UPDATE job j
              LEFT JOIN semaphore s
                     ON (j.job_id=s.dependent_job_id)
-                   SET j.retry_count = CASE WHEN j.status='READY' THEN 0 ELSE 1 END,
+                   SET j.retry_count = j.retry_count + 1,
                        j.status = }.$self->job_status_cast("CASE WHEN s.local_jobs_counter+s.remote_jobs_counter>0 THEN 'SEMAPHORED' ELSE 'READY' END").qq{
                  WHERE $analyses_filter $statuses_filter
         } : ($self->dbc->driver eq 'pgsql') ? qq{
                 UPDATE job
-                   SET retry_count = CASE WHEN j.status='READY' THEN 0 ELSE 1 END,
+                   SET j.retry_count = j.retry_count + 1,
                        status = }.$self->job_status_cast("CASE WHEN s.local_jobs_counter+s.remote_jobs_counter>0 THEN 'SEMAPHORED' ELSE 'READY' END").qq{
                   FROM job j
              LEFT JOIN semaphore s
@@ -840,7 +839,7 @@ sub reset_jobs_for_analysis_id {
                          j.accu_id_stack,
                          j.role_id,
                          CASE WHEN s.local_jobs_counter+s.remote_jobs_counter>0 THEN 'SEMAPHORED' ELSE 'READY' END,
-                         CASE WHEN j.status='READY' THEN 0 ELSE 1 END,
+                         j.retry_count + 1,
                          j.when_completed,
                          j.controlled_semaphore_id
                     FROM job j
