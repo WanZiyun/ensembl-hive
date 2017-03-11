@@ -665,6 +665,7 @@ CREATE TABLE worker_resource_usage (
 CREATE TABLE log_message (
     log_message_id          INTEGER     NOT NULL PRIMARY KEY AUTO_INCREMENT,
     job_id                  INTEGER              DEFAULT NULL,
+    attempt_id              INTEGER              DEFAULT NULL,
     role_id                 INTEGER              DEFAULT NULL,
     worker_id               INTEGER              DEFAULT NULL,
     beekeeper_id            INTEGER              DEFAULT NULL,
@@ -675,7 +676,9 @@ CREATE TABLE log_message (
     message_class           ENUM('INFO', 'PIPELINE_CAUTION', 'PIPELINE_ERROR', 'WORKER_CAUTION', 'WORKER_ERROR') NOT NULL DEFAULT 'INFO',
 
             KEY worker_id     (worker_id),
+            KEY role_id       (role_id),
             KEY job_id        (job_id),
+            KEY attempt_id    (attempt_id),
             KEY beekeeper_id  (beekeeper_id)
 ) COLLATE=latin1_swedish_ci ENGINE=InnoDB;
 

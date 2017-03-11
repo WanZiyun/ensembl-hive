@@ -36,6 +36,7 @@ ALTER TABLE job                     ADD CONSTRAINT  job_analysis_id_fkey        
 ALTER TABLE role                    ADD FOREIGN KEY (analysis_id)               REFERENCES analysis_base(analysis_id);
 
 ALTER TABLE job                     ADD FOREIGN KEY (last_attempt_id)           REFERENCES attempt(attempt_id);
+ALTER TABLE log_message             ADD FOREIGN KEY (attempt_id)                REFERENCES attempt(attempt_id)                  ON DELETE CASCADE;
 
 ALTER TABLE dataflow_rule           ADD FOREIGN KEY (funnel_dataflow_rule_id)   REFERENCES dataflow_rule(dataflow_rule_id);
 ALTER TABLE dataflow_target         ADD FOREIGN KEY (source_dataflow_rule_id)   REFERENCES dataflow_rule(dataflow_rule_id);
