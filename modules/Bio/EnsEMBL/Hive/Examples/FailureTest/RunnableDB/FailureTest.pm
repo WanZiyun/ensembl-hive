@@ -192,7 +192,7 @@ sub dangerous_math {
 
         if(my $lethal_after = $self->param('lethal_after')) {
             if($value>$lethal_after) { # take the Worker with us into the grave
-                $self->input_job->lethal_for_worker(1);
+                $self->attempt->lethality_level('worker');
             }
         }
 

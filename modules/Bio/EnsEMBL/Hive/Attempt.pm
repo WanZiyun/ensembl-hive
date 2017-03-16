@@ -99,6 +99,20 @@ sub stderr_file {
 }
 
 
+##-----------------[indicators to the Worker]--------------------------------
+
+# Job can set this to "role", "worker" or "beekeeper" prior to dying (or before running code that might cause death - such as RunnableDB's compilation)
+# if it believes that the state of things will not allow the agentr to continue normally.
+# The agent will check the value and commit suicide if it is set to true.
+sub lethality_level {
+    my $self = shift;
+    $self->{'_lethality_level'} = shift if(@_);
+    return lc $self->{'_lethality_level'} if defined $self->{'_lethality_level'};
+}
+
+
+##-----------------[/indicators to the Worker]-------------------------------
+
 
 # --------------------------------- Compound methods ---------------------------------------
 

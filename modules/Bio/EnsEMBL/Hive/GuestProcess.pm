@@ -88,7 +88,7 @@ response from GuestProcess):
               "complete": [true|false],
               "job": {
                 "autoflow": [true|false],
-                "lethal_for_worker": [true|false],
+                "lethality_level": [null|role|worker|beekeeper],
                 "transient_error": [true|false],
               },
               "params": {
@@ -477,6 +477,7 @@ sub life_cycle {
     $self->print_debug("LIFE_CYCLE");
 
     my $job = $self->input_job();
+    my $attempt = $self->attempt();
     my $partial_stopwatch = Bio::EnsEMBL::Hive::Utils::Stopwatch->new();
     my %job_partial_timing = ();
 
@@ -529,7 +530,7 @@ sub life_cycle {
             # They are coded as JSON::true and JSON::false which have
             # different meanings in text / number contexts
             $job->autoflow($job->autoflow and $content->{job}->{autoflow});
-            $job->lethal_for_worker($content->{job}->{lethal_for_worker}?1:0);
+            $attempt->lethality_level($content->{job}->{lethality_level}) if $content->{job}->{lethality_level};
             $job->transient_error($content->{job}->{transient_error}?1:0);
             $job->{_param_hash} = $content->{params}->{substituted};
             $job->{_unsubstituted_param_hash} = $content->{params}->{unsubstituted};

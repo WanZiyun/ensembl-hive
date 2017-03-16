@@ -60,8 +60,13 @@ BaseRunnable must expose the following attributes via an `input_job` field:
 * `retry_count`: the number of times this job has already been tried.
 * `autoflow`: defaults to True: False means that the job will not a
   dataflow on branch #1 upon success
-* `lethal_for_worker`: defaults to False. True means that the error may
-  have contaminated the worker itself, which should bury itself
+* `lethality_level`: defaults to undefined. This is used to tell eHive to
+  stop running some agents after this job. Three values are possible:
+  "role" means that the current role must end (but the worker may
+  respecialize to other analyses if allowed by the can\_respecialize flag,
+  "worker" means that the worker must end (this is equivalent to the
+  previous option "lethal\_for\_worker"), "beekeeper" means that all the
+  beekeepers must now stop submitting new jobs.
 * `transient_error`: defaults to True. False means that the next error
   can not magically disappear at the next run
 

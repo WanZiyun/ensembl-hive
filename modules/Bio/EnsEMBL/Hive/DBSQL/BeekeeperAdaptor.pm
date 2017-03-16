@@ -131,5 +131,22 @@ sub reload_beekeeper_is_blocked {
 }
 
 
+=head2 block_all_beekeepers
+
+  Example     : $bk_adaptor->block_all_beekeepers();
+  Description : Mark all the active beekeepers as blocked in the database
+  Returntype  : none
+  Exceptions  : none
+  Caller      : general
+  Status      : Stable
+
+=cut
+
+sub block_all_beekeepers {
+    my ($self) = @_;
+
+    my $sql = 'UPDATE beekeeper SET is_blocked = 1 WHERE cause_of_death IS NULL';
+    return $self->dbc->do($sql);
+}
 
 1;

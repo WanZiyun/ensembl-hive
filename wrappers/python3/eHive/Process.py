@@ -127,7 +127,7 @@ class BaseRunnable(object):
         for x in ['dbID', 'input_id', 'retry_count']:
             setattr(self.input_job, x, config['input_job'][x])
         self.input_job.autoflow = True
-        self.input_job.lethal_for_worker = False
+        self.input_job.lethality_level = None
         self.input_job.transient_error = True
 
         # Worker attributes
@@ -167,7 +167,7 @@ class BaseRunnable(object):
             self.warning( self.__traceback(2), True)
 
         job_end_structure = {'complete' : not died_somewhere, 'job': {}, 'params': {'substituted': self.__params.param_hash, 'unsubstituted': self.__params.unsubstituted_param_hash}}
-        for x in [ 'autoflow', 'lethal_for_worker', 'transient_error' ]:
+        for x in [ 'autoflow', 'lethality_level', 'transient_error' ]:
             job_end_structure['job'][x] = getattr(self.input_job, x)
         self.__send_message_and_wait_for_OK('JOB_END', job_end_structure)
 

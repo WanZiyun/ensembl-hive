@@ -34,7 +34,7 @@ public class Job {
 	private final String inputId;
 
 	private boolean autoflow = true;
-	private boolean lethalForWorker = false;
+	private String lethalityLevel = null;
 	private boolean transientError = true;
 	private boolean complete = false;
 
@@ -82,12 +82,12 @@ public class Job {
 		this.autoflow = autoflow;
 	}
 
-	public boolean isLethalForWorker() {
-		return lethalForWorker;
+	public String getLethalityLevel() {
+		return lethalityLevel;
 	}
 
-	public void setLethalForWorker(boolean lethalForWorker) {
-		this.lethalForWorker = lethalForWorker;
+	public void setLethalityLevel(String lethalityLevel) {
+		this.lethalityLevel = lethalityLevel;
 	}
 
 	public boolean isTransientError() {

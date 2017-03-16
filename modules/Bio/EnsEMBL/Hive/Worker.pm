@@ -579,15 +579,22 @@ sub run {
             $self->adaptor->db->get_AnalysisStatsAdaptor->update_status( $self->current_role->analysis_id, 'ALL_CLAIMED' );
         }
 
-        if( $cod =~ /^(NO_WORK|HIVE_OVERLOAD)$/ and $self->can_respecialize and (!$specialization_arghash->{'-analyses_pattern'} or $specialization_arghash->{'-analyses_pattern'}!~/^\w+$/) ) {
+        if( $cod =~ /^(NO_WORK|HIVE_OVERLOAD|ROLE_CONTAMINATED)$/ and $self->can_respecialize and (!$specialization_arghash->{'-analyses_pattern'} or $specialization_arghash->{'-analyses_pattern'}!~/^\w+$/) ) {
             my $old_role = $self->current_role;
             $self->adaptor->db->get_RoleAdaptor->finalize_role( $old_role, 0 );
             $self->current_role( undef );
             $self->cause_of_death(undef);
+            if ($cod eq 'ROLE_CONTAMINATED') {
+                $specialization_arghash->{'-analyses_pattern'} = ($specialization_arghash->{'-analyses_pattern'} || "%") . "-" . $old_role->analysis->dbID;
+            }
             $self->specialize_and_compile_wrapper( $specialization_arghash );
         }
 
     }     # /Worker's lifespan loop
+
+    if ($self->cause_of_death eq 'BEEKEEPER_CONTAMINTATED') {
+        $self->adaptor->db->get_BeekeeperAdaptor->block_all_beekeepers();
+    }
 
     # The second argument ("update_when_checked_in") is set to force an
     # update of the "when_checked_in" timestamp in the worker table
@@ -727,6 +734,8 @@ sub run_one_batch {
 
         $self->current_role->register_attempt( ! $job->died_somewhere );
 
+        my %agent2contamination = ('Role' => 'ROLE_CONTAMINATED', 'Beekeeper' => 'BEEKEEPER_CONTAMINTATED', 'Worker' => 'CONTAMINATED');
+
         if($job->died_somewhere) {
                 # Both flags default to 1, meaning that jobs would by default be retried.
                 # If the job specifically said not to retry, or if the worker is configured
@@ -736,11 +745,12 @@ sub run_one_batch {
             $job->adaptor->release_and_age_job( $job_id, $max_retry_count, $may_retry );
 
             if( $self->prev_job_error                # a bit of AI: if the previous job failed as well, it is LIKELY that we have contamination
-             or $job->lethal_for_worker ) {          # trust the job's expert knowledge
+             or $attempt->lethality_level) {          # trust the job's expert knowledge
                 my $reason = $self->prev_job_error            ? 'two failed jobs in a row'
                            :                                    'suggested by job itself';
-                $self->worker_say( "Job's error has contaminated the Worker ($reason), so the Worker will now die" );
-                $self->cause_of_death('CONTAMINATED');
+                my $agent  = $self->prev_job_error ? 'Worker' : (ucfirst $attempt->lethality_level);
+                $self->worker_say( "Job's error has contaminated the $agent ($reason), so the $agent will now die" );
+                $self->cause_of_death( $agent2contamination{$agent} );
                 last ONE_BATCH;
             }
         } else {    # job successfully completed:
@@ -752,9 +762,11 @@ sub run_one_batch {
                 $controlled_semaphore->decrease_by( [ $job ] );
             }
 
-            if($job->lethal_for_worker) {
-                $self->worker_say( "The Job, although complete, wants the Worker to die" );
-                $self->cause_of_death('CONTAMINATED');
+            if($attempt->lethality_level) {
+                my $msg = "The Job, although complete, wants the ".(ucfirst $attempt->lethality_level)." to die";
+                $self->worker_say( $msg );
+                $self->adaptor->db->get_LogMessageAdaptor()->store_job_message($job->dbID, $msg, 'WORKER_ERROR');
+                $self->cause_of_death( $agent2contamination{ucfirst $attempt->lethality_level} );
                 last ONE_BATCH;
             }
         }
