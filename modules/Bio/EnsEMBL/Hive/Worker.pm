@@ -737,12 +737,18 @@ sub run_one_batch {
         my %agent2contamination = ('Role' => 'ROLE_CONTAMINATED', 'Beekeeper' => 'BEEKEEPER_CONTAMINTATED', 'Worker' => 'CONTAMINATED');
 
         if($job->died_somewhere) {
-                # Both flags default to 1, meaning that jobs would by default be retried.
-                # If the job specifically said not to retry, or if the worker is configured
-                # not to retry jobs, follow their wish.
-            my $may_retry = $job->transient_error && $self->retry_throwing_jobs;
+            my $failure_level = $attempt->failure_level;
+            my $may_retry = ($failure_level eq 'attempt') && $self->retry_throwing_jobs;
 
             $job->adaptor->release_and_age_job( $job_id, $max_retry_count, $may_retry );
+
+            if ($failure_level eq 'analysis') {
+                my $msg = 'The job wants the analysis to fail';
+                $self->adaptor->db->get_LogMessageAdaptor()->store_job_message($job->dbID, $msg, 'WORKER_ERROR');
+                my $stats = $job->analysis->stats;
+                $stats->is_excluded(1);
+                $stats->adaptor->update_is_excluded($stats);
+            }
 
             if( $self->prev_job_error                # a bit of AI: if the previous job failed as well, it is LIKELY that we have contamination
              or $attempt->lethality_level) {          # trust the job's expert knowledge

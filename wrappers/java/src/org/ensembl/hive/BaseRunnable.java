@@ -42,7 +42,7 @@ public abstract class BaseRunnable {
 	private static final String IS_ERROR_KEY = "is_error";
 	private static final String MESSAGE_KEY = "message";
 	private static final String WARNING_KEY = "WARNING";
-	private static final String TRANSIENT_ERROR_KEY = "transient_error";
+	private static final String FAILURE_LEVEL_KEY = "failure_level";
 	private static final String LETHALITY_LEVEL_KEY = "lethality_level";
 	private static final String AUTOFLOW_KEY = "autoflow";
 	private static final String EXECUTE_WRITES_KEY = "execute_writes";
@@ -186,7 +186,7 @@ public abstract class BaseRunnable {
 						JOB_KEY,
 						toMap(AUTOFLOW_KEY, job.isAutoflow(),
 								LETHALITY_LEVEL_KEY, job.getLethalityLevel(),
-								TRANSIENT_ERROR_KEY, job.isTransientError()),
+								FAILURE_LEVEL_KEY, job.getFailureLevel()),
 						PARAMS_KEY,
 						toMap(SUBSTITUTED_KEY, job.getParameters().getParams(),
 								UNSUBSTITUTED_KEY, job.getParameters()

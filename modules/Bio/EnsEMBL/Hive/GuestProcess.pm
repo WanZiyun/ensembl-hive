@@ -89,7 +89,7 @@ response from GuestProcess):
               "job": {
                 "autoflow": [true|false],
                 "lethality_level": [null|role|worker|beekeeper],
-                "transient_error": [true|false],
+                "failure_level": [attempt|job|analysis],
               },
               "params": {
                 "substituted": { ... the parameters that are currently substituted ... }
@@ -531,7 +531,7 @@ sub life_cycle {
             # different meanings in text / number contexts
             $job->autoflow($job->autoflow and $content->{job}->{autoflow});
             $attempt->lethality_level($content->{job}->{lethality_level}) if $content->{job}->{lethality_level};
-            $job->transient_error($content->{job}->{transient_error}?1:0);
+            $attempt->failure_level($content->{job}->{failure_level});
             $job->{_param_hash} = $content->{params}->{substituted};
             $job->{_unsubstituted_param_hash} = $content->{params}->{unsubstituted};
 

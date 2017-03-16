@@ -128,7 +128,7 @@ class BaseRunnable(object):
             setattr(self.input_job, x, config['input_job'][x])
         self.input_job.autoflow = True
         self.input_job.lethality_level = None
-        self.input_job.transient_error = True
+        self.input_job.failure_level = 'attempt'
 
         # Worker attributes
         self.debug = config['debug']
@@ -167,7 +167,7 @@ class BaseRunnable(object):
             self.warning( self.__traceback(2), True)
 
         job_end_structure = {'complete' : not died_somewhere, 'job': {}, 'params': {'substituted': self.__params.param_hash, 'unsubstituted': self.__params.unsubstituted_param_hash}}
-        for x in [ 'autoflow', 'lethality_level', 'transient_error' ]:
+        for x in [ 'autoflow', 'lethality_level', 'failure_level' ]:
             job_end_structure['job'][x] = getattr(self.input_job, x)
         self.__send_message_and_wait_for_OK('JOB_END', job_end_structure)
 
@@ -221,11 +221,11 @@ class BaseRunnable(object):
 
     def param_required(self, param_name):
         """Returns the value of the parameter "param_name" or raises an exception
-        if anything wrong happens. The exception is marked as non-transient."""
-        t = self.input_job.transient_error
-        self.input_job.transient_error = False
+        if anything wrong happens. The exception is raised at the job-level."""
+        t = self.input_job.failure_level
+        self.input_job.failure_level = 'job'
         v = self.__params.get_param(param_name)
-        self.input_job.transient_error = t
+        self.input_job.failure_level = t
         return v
 
     def param(self, param_name, *args):

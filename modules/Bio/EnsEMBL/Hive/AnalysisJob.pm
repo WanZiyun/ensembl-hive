@@ -187,15 +187,13 @@ sub lethal_for_worker {     ## DEPRECATED
     return (($self->last_attempt->lethality_level // '') eq 'worker') ? 1 : undef;
 }
 
-sub transient_error {       # Job should set this to 1 prior to dying (or before running code that might cause death)
-                            # if it believes that it makes sense to retry the same job without any changes.
-                            # It may also set it to 0 prior to dying (or before running code that might cause death)
-                            # if it believes that there is no point in re-trying (say, if the parameters are wrong).
-                            # The Worker will check the flag and make necessary adjustments to the database state.
-                            # Errors are considered transient by default
+sub transient_error {       ## DEPRECATED
     my $self = shift;
-    $self->{'_transient_error'} = shift if(@_);
-    return ($self->{'_transient_error'} // 1);
+    if (@_) {
+        my $t = shift;
+        $self->last_attempt->failure_level( $t ? 'attempt' : 'job' );
+    }
+    return ($self->last_attempt->failure_level() eq 'attempt') ? 1 : 0;
 }
 
 sub incomplete {            # Job should set this to 0 prior to throwing if the job is done,

@@ -35,7 +35,7 @@ public class Job {
 
 	private boolean autoflow = true;
 	private String lethalityLevel = null;
-	private boolean transientError = true;
+	private String failureLevel = "attempt";
 	private boolean complete = false;
 
 	public Job(Map<String, Object> jobParams) {
@@ -90,12 +90,12 @@ public class Job {
 		this.lethalityLevel = lethalityLevel;
 	}
 
-	public boolean isTransientError() {
-		return transientError;
+	public String getFailureLevel() {
+		return failureLevel;
 	}
 
-	public void setTransientError(boolean transientError) {
-		this.transientError = transientError;
+	public void setFailureLevel(String failureLevel) {
+		this.failureLevel = failureLevel;
 	}
 
 	public String toString() {
@@ -116,16 +116,16 @@ public class Job {
 
 	/**
 	 * Returns the value of the parameter "param_name" or raises an exception if
-	 * anything wrong happens. The exception is marked as non-transient.
+	 * anything wrong happens. The exception is raised at the job-level.
 	 * 
 	 * @param paramName The name of the parameter
 	 * @return          The value of the parameter
 	 */
 	public Object paramRequired(String paramName) {
-		boolean e = isTransientError();
-		setTransientError(false);
+		String f = getFailureLevel();
+		setFailureLevel("job");
 		Object v = getParameters().getParam(paramName);
-		setTransientError(e);
+		setFailureLevel(f);
 		return v;
 	}
 }

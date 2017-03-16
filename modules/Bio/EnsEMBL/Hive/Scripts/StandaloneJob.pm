@@ -55,15 +55,14 @@ sub standaloneJob {
         'dbID'          => -1,
     );
 
-    $job->load_parameters( $runnable_object );
-
-
     if($flow_into) {
         Bio::EnsEMBL::Hive::Utils::PCL::parse_flow_into($hive_pipeline, $dummy_analysis, destringify($flow_into) );
     }
 
     my $attempt = $job->create_new_attempt();
     $runnable_object->attempt($attempt);
+
+    $job->load_parameters( $runnable_object );
     $runnable_object->life_cycle();
 
     $runnable_object->cleanup_worker_temp_directory() unless $flags->{no_cleanup};

@@ -67,8 +67,10 @@ BaseRunnable must expose the following attributes via an `input_job` field:
   "worker" means that the worker must end (this is equivalent to the
   previous option "lethal\_for\_worker"), "beekeeper" means that all the
   beekeepers must now stop submitting new jobs.
-* `transient_error`: defaults to True. False means that the next error
-  can not magically disappear at the next run
+* `failure_level`: defaults to "attempt". Can also be set to "job" or
+  "analysis". "job" means that the next error can not magically disappear
+  at the next run, "analysis" means that the analysis itself should be
+  aborted.
 
 And these attributes directly:
 * `debug`: an unsigned integer indicating the logging level
