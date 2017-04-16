@@ -306,6 +306,9 @@ sub submit_workers {
 
     $ENV{'LSB_STDOUT_DIRECT'} = 'y';  # unbuffer the output of the bsub command
 
+    delete $ENV{'LSB_JOBID'};
+    delete $ENV{'LSB_JOBINDEX'};
+
     my @cmd = ('bsub',
         '-o', $submit_stdout_file,
         '-e', $submit_stderr_file,
